@@ -64,10 +64,121 @@ policies, either expressed or implied, of the FreeBSD Project.
 // Output: none
 
 volatile uint8_t Command = 0x00;
+volatile int left = 0;
+volatile int right = 0;
+
+volatile int max_duty = 12000;
+volatile double ratio = 0;
+
 
 void Read_Command(){
     uint8_t direction = Command &= 0x07;
     uint8_t speed = (Command &= 0x18) >> 3;
+
+    switch(direction){
+    case 0x00: // STOP
+        break;
+
+    case 0x01: // LEFT
+    //25%
+        if (speed == 0x00) {
+            left = 4500;
+            right = 7500;
+        }
+    //50%
+        else if (speed == 0x01){
+            left = 3000;
+            right = 9000;
+        }
+    //75%
+        else if (speed == 0x10){
+            left = 1500;
+            right = 10500;
+        }
+    // HARD LEFT LEFT TURN
+        else{
+            left = 0;
+            right = 12000;
+        }
+
+        break;
+
+    case 0x02: // RIGHT
+    //25%
+        if (speed == 0x00) {
+            left = 7500;
+            right = 4500;
+        }
+    //50%
+        else if (speed == 0x01){
+            left = 9000;
+            right = 3000;
+        }
+    //75%
+        else if (speed == 0x10){
+            left = 10500;
+            right = 1500;
+        }
+    // HARD LEFT RIGHT TURN
+        else{
+            left = 12000;
+            right = 0;
+        }
+        break;
+
+    case 0x03: // FORWARD
+    //25%
+        if (speed == 0x00) {
+            ratio = 0.25;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //50%
+        else if (speed == 0x01){
+            ratio = 0.5;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //75%
+        else if (speed == 0x10){
+            ratio = 0.75;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //100%
+        else{
+            ratio = 1.0;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+        break;
+    case 0x07: // BACKWARDS
+    //25%
+        if (speed == 0x00) {
+            ratio = 0.25;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //50%
+        else if (speed == 0x01){
+            ratio = 0.5;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //75%
+        else if (speed == 0x10){
+            ratio = 0.75;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+        }
+    //100%
+        else{
+            ratio = 1.0;
+            left = ratio * max_duty;
+            right = ratio * max_duty;
+       }
+       break;
+    }
 }
 
 void Motor_Init(void){

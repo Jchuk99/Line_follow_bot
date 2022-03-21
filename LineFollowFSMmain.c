@@ -163,7 +163,8 @@ void get_next_state(void){
         fsm_in = POS_CENTER;
     }
 }
-int main(void){ uint32_t heart=0;
+int main(void){
+  uint32_t heart=0;
   Clock_Init48MHz();
   LaunchPad_Init();
   TExaS_Init(LOGICANALYZER);  // optional
@@ -178,7 +179,7 @@ int main(void){ uint32_t heart=0;
 
   Spt = Center;
   while(1){
-    motor_output = Spt->out;            // set output from FSM
+    read_command(Spt->out);            // set output from FSM
     Clock_Delay1ms(Spt->delay);   // wait
     // first transform reflectance_input from 64 conditions to ~8 conditions?
     get_next_state();

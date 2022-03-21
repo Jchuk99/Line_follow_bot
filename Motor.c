@@ -63,11 +63,9 @@ policies, either expressed or implied, of the FreeBSD Project.
 // Input: none
 // Output: none
 
-volatile uint8_t Command = 0x00;
-
-void Read_Command(){
-    uint8_t direction = Command &= 0x07;
-    uint8_t speed = (Command &= 0x18) >> 3;
+void Read_Command(uint8_t command){
+    uint8_t direction = command &= 0x07;
+    uint8_t speed = (command &= 0x18) >> 3;
 }
 
 void Motor_Init(void){

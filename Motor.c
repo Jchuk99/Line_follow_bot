@@ -10,19 +10,15 @@
    Jonathan W. Valvano, ISBN: 9781074544300, copyright (c) 2019
  For more information about my classes, my research, and my books, see
  http://users.ece.utexas.edu/~valvano/
-
 Simplified BSD License (FreeBSD License)
 Copyright (c) 2019, Jonathan Valvano, All rights reserved.
-
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
-
 1. Redistributions of source code must retain the above copyright notice,
    this list of conditions and the following disclaimer.
 2. Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
-
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -33,7 +29,6 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
 AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 The views and conclusions contained in the software and documentation are
 those of the authors and should not be interpreted as representing official
 policies, either expressed or implied, of the FreeBSD Project.
@@ -64,8 +59,62 @@ policies, either expressed or implied, of the FreeBSD Project.
 // Output: none
 
 void Read_Command(uint8_t command){
-    uint8_t direction = command &= 0x07;
-    uint8_t speed = (command &= 0x18) >> 3;
+    uint8_t direction = command & 0x07;
+    uint8_t speed = (command & 0x18) >> 3;
+
+    switch(direction){
+    case 0x00: // STOP
+        Motor_Stop();
+        break;
+
+    case 0x01: // LEFT
+        //fast left turn
+        if (speed == 0x01){
+            Motor_Left(10000, 10000);
+        }
+        // normal left turn
+        else{
+            Motor_Left(7000, 7000);
+        }
+
+        break;
+
+    case 0x02: // RIGHT
+        // fast right turn
+        if (speed == 0x01){
+            Motor_Right(10000, 10000);
+        }
+        // normal right turn
+        else{
+            Motor_Right(7000, 7000);
+        }
+        break;
+
+    case 0x03: // FORWARD
+    // center speed
+        if (speed == 0x00) {
+            Motor_Forward(8000, 8000);
+        }
+    // slightly left speed
+        else if (speed == 0x01){
+            // slightly left
+            Motor_Forward(7000, 7000);
+        }
+    // slightly right speed
+        else if (speed == 0x02){
+            // slightly right
+            // (t) = (vR – vL)t/b +
+            Motor_Forward(7000, 7000);
+
+        }
+    // center init - mario kart boost
+        else if (speed == 0x03){
+            Motor_Forward(10000, 10000);
+        }
+        break;
+    case 0x07: // BACKWARDS
+       break;
+    }
 }
 
 void Motor_Init(void){
@@ -83,6 +132,7 @@ void Motor_Init(void){
     P5->DIR |= 0x30;        //5.4, 5.5 -> output
 
     P3->OUT &= ~0xC0;        //set 3.6 and 3.7 to sleep
+    PWM_Init34(14999,0,0);     // PWM
 
 }
 
@@ -178,5 +228,3 @@ void Motor_Backward(uint16_t leftDuty, uint16_t rightDuty){
   PWM_Duty4(rightDuty);
 
 }
-
-

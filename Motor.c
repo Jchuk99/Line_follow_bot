@@ -70,11 +70,11 @@ void Read_Command(uint8_t command){
     case 0x01: // LEFT
         //fast left turn
         if (speed == 0x01){
-            Motor_Left(10000, 10000);
+            Motor_Left(4900, 4900);
         }
         // normal left turn
         else{
-            Motor_Left(7000, 7000);
+            Motor_Left(3500, 3500);
         }
 
         break;
@@ -82,34 +82,37 @@ void Read_Command(uint8_t command){
     case 0x02: // RIGHT
         // fast right turn
         if (speed == 0x01){
-            Motor_Right(10000, 10000);
+            Motor_Right(4900, 4900);
+        }
+        else if (speed == 0x10){
+            Motor_Right(14000, 14000);
         }
         // normal right turn
         else{
-            Motor_Right(7000, 7000);
+            Motor_Right(3500, 3500);
         }
         break;
 
     case 0x03: // FORWARD
     // center speed
         if (speed == 0x00) {
-            Motor_Forward(8000, 8000);
+            Motor_Forward(6700, 6700);
         }
-    // slightly left speed
+    // slightly left/right speed
         else if (speed == 0x01){
             // slightly left
-            Motor_Forward(7000, 7000);
+            Motor_Forward(6000, 6000);
         }
     // slightly right speed
         else if (speed == 0x02){
             // slightly right
             // (t) = (vR – vL)t/b +
-            Motor_Forward(7000, 7000);
+            Motor_Forward(4250, 4250);
 
         }
     // center init - mario kart boost
         else if (speed == 0x03){
-            Motor_Forward(10000, 10000);
+            Motor_Forward(14000, 14000);
         }
         break;
     case 0x07: // BACKWARDS

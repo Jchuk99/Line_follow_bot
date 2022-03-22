@@ -49,16 +49,12 @@ policies, either expressed or implied, of the FreeBSD Project.
 #include <stdint.h>
 #include "msp.h"
 
-
-void (*BumpIntTask)(uint8_t);   // user function
-
 // Initialize Bump sensors
 // Make six Port 4 pins inputs
 // Activate interface pullup
 // pins 7,6,5,3,2,0
 // Interrupt on falling edge (on touch)
-void BumpInt_Init(void(*task)(uint8_t)){
-    BumpIntTask = task;
+void BumpInt_Init(void){
     // set as GPIO (00)
     P4->SEL0 &= ~0xED;
     P4->SEL1 &= ~0xED;
@@ -99,14 +95,5 @@ uint8_t Bump_Read(void){
     res |= (~(P4->IN) & 0xE0) >> 2;
 
     return res;
-}
-
-// we do not care about critical section/race conditions
-// triggered on touch, falling edge
-void PORT4_IRQHandler(void){
-    // port 4, pins 7,6,5,3,2,0
-    P4->IFG &= ~0xEC;       // acknowledgment, clear flag
-    uint8_t data = Bump_Read();
-    BumpIntTask(data);
 }
 

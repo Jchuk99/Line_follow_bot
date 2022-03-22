@@ -38,6 +38,7 @@ policies, either expressed or implied, of the FreeBSD Project.
 */
 
 #include "msp.h"
+#include "BumpInt.h"
 #include "../inc/Motor.h"
 #include "../inc/Clock.h"
 #include "..\inc\Reflectance.h"
@@ -82,41 +83,45 @@ typedef const struct State State_t;
 #define Right  &fsm[4]
 #define BufferCenter &fsm[5]
 #define BufferCenter2 &fsm[6]
-#define OffCenter &fsm[7]
-#define OffLeft &fsm[8]
-#define OffLeft2 &fsm[9]
-#define OffLeft3 &fsm[10]
-#define OffRight &fsm[11]
-#define OffRight2 &fsm[12]
-#define OffRight3 &fsm[13]
-#define Stop  &fsm[14]
-#define InitCenter &fsm[15]
+#define LostRight &fsm[7]
+#define LostRight2 &fsm[8]
+#define OffCenter &fsm[9]
+#define OffLeft &fsm[10]
+#define OffLeft2 &fsm[11]
+#define OffLeft3 &fsm[12]
+#define OffRight &fsm[13]
+#define OffRight2 &fsm[14]
+#define OffRight3 &fsm[15]
+#define Stop  &fsm[16]
+#define InitCenter &fsm[18]
 
-State_t fsm[16]={
+State_t fsm[18]={
                 //center, left, slightlight, right, slightright, lost
   //real output of center is 0x03(drive forward), 0x00 for testing
   {0x03, 50, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter}},  // Center
   {0x0B, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffLeft}},  // SlightLeft
   {0x02, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffLeft}},   // Left
-  {0x13, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffRight}},   // SlightRight
+  {0x0B, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffRight}},   // SlightRight
   {0x01, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffRight}},   // Right
-  {0x03, 50, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter2}},  // BufferCenter
-  {0x03, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffCenter}},  // BufferCenter2
-  {0x03, 50, { Center, Left,  SlightLeft, Right, SlightRight, Stop}},   // OffCenter
+  {0x13, 50, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter2}},  // BufferCenter
+  {0x13, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffCenter}},  // BufferCenter2
+  {0x12, 200, { Center, Left,  SlightLeft, Right, SlightRight, LostRight2}},  // LostRight, last ditch effort to find line
+  {0x12, 200, { Center, Left,  SlightLeft, Right, SlightRight, Stop}},  // LostRight2, last ditch effort to find line
+  {0x13, 50, { Center, Left,  SlightLeft, Right, SlightRight, LostRight}},   // OffCenter
   {0x0A, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffLeft2}}, // OffLeft
   {0x0A, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffLeft3}}, // OffLeft2
-  {0x0A, 50, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter2}}, // OffLeft3
+  {0x0A, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffCenter}}, // OffLeft3
   {0x09, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffRight2}},   // OffRight
   {0x09, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffRight3}},   // OffRight2
-  {0x09, 50, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter2}},   // OffRight3
+  {0x09, 50, { Center, Left,  SlightLeft, Right, SlightRight, OffCenter}},   // OffRight3
   {0x00, 250, { Stop, Stop,  Stop, Stop, Stop, Stop}},   // Stop
-  {0x1B, 250, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter}},  // initCenter
+  {0x1B, 255, { Center, Left,  SlightLeft, Right, SlightRight, BufferCenter}},  // initCenter
 
 };
 
 State_t *Spt;  // pointer to the current state
-uint8_t bump_sensor_activated;
-uint8_t reflect_in;
+volatile uint8_t bump_sensor_in;
+volatile uint8_t reflect_in;
 uint8_t fsm_in;
 
 void SysTick_Handler(void){ // every 1ms
@@ -135,6 +140,13 @@ void SysTick_Handler(void){ // every 1ms
     }
 }
 
+// we do not care about critical section/race conditions
+// triggered on touch, falling edge
+void PORT4_IRQHandler(void){
+    // port 4, pins 7,6,5,3,2,0
+    P4->IFG &= ~0xEC;       // acknowledgment, clear flag
+    bump_sensor_in = Bump_Read();
+}
 
 
 /*Run FSM continuously
@@ -144,6 +156,7 @@ void SysTick_Handler(void){ // every 1ms
 4) Next depends on (Input,State)
  */
 void get_next_state(void){
+
     if(reflect_in == 0x18 ||reflect_in == 0xFF || reflect_in == 0x3C || reflect_in == 0x7E){
         fsm_in = POS_CENTER;
     }
@@ -171,10 +184,11 @@ void get_next_state(void){
 int main(void){
   Clock_Init48MHz();
   Motor_Init();
+  BumpInt_Init();
   Reflectance_Init();
+  bump_sensor_in = 0;
   SysTick_Init(48000,2);  // set up SysTick for 1000 Hz interrupts
   EnableInterrupts();
-  bump_sensor_activated = 0;
   Spt = Center;
 
   while(1){
@@ -183,6 +197,8 @@ int main(void){
     // first transform reflectance_input from 64 conditions to ~8 conditions?
     get_next_state();
     Spt = Spt->next[fsm_in]; // next depends on input and state
+    if(bump_sensor_in > 0){Spt = Stop;}
+
     }
  }
 
